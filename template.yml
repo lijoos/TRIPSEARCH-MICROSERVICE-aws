@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+- AWS::Serverless-2016-10-31
+- AWS::CodeStar
+
+Parameters:
+  ProjectId:
+    Type: String
+    Description: AWS CodeStar projectID used to associate new resources to team members
+  CodeDeployRole:
+    Type: String
+    Description: IAM role to allow AWS CodeDeploy to manage deployment of AWS Lambda functions
+  Stage:
+    Type: String
+    Description: The name for a project pipeline stage, such as Staging or Prod, for which resources are provisioned and deployed.
+    Default: ''
+
+
+Resources:
+
+  RestAPI:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: Prod
+      DefinitionUri: swagger.yml
+      Variables:
+        LambdaTrips: !Ref FindAllTrips
+        LambdaTripsFromCity: !Ref FindAllTripsFromCity
+        LambdaTripsToCity: !Ref FindAllTripsToCity
+
+
+  FindAllTrips:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/tripsearch-1.0.0.jar
+      Handler: devlounge.lambda.FindAllTripsHandler
+      Runtime: java8
+      Description: Returns a list of the current trips as JSON
+      Policies: AmazonDynamoDBFullAccess
+      Timeout: 10
+      MemorySize: 1024
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /trips
+            Method: GET
+            RestApiId: !Ref RestAPI
+
+  FindAllTripsFromCity:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/tripsearch-1.0.0.jar
+      Handler: devlounge.lambda.FindTripsFromCityHandler
+      Runtime: java8
+      Description: Returns a list of the trips with origin city as specified, in JSON format
+      Policies: AmazonDynamoDBFullAccess
+      Timeout: 10
+      MemorySize: 1024
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /tripsfromcity/{city}
+            Method: GET
+            RestApiId: !Ref RestAPI
+  FindAllTripsToCity:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/tripsearch-1.0.0.jar
+      Handler: devlounge.lambda.FindTripsToCityHandler
+      Runtime: java8
+      Description: Returns a list of the trips with destination city as specified, in JSON format
+      Policies: AmazonDynamoDBFullAccess
+      Timeout: 10
+      MemorySize: 1024
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /tripstocity/{city}
+            Method: GET
+            RestApiId: !Ref RestAPI
